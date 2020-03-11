@@ -1,0 +1,28 @@
+%% MATCH FILTERING %
+
+% MAX FINDING %
+%  minValue = min(greenChannel(:))
+% % % [i,j,v] = find(greenChannel == maxValue)
+%  [rowsOfMaxes, colsOfMaxes] = find(pictureLap == minValue)
+% % find(maxValue)
+% [maxval,idx]=max(greenChannel(:));
+% [row,col]=ind2sub(size(greenChannel), idx);
+
+% BOTTOM HAT FILTERING %
+original = pictureLap;
+se = strel('disk',3);
+contrastFiltered = imsubtract(imadd(original,imtophat(original,se)), imbothat(original,se));
+
+figure
+subplot(1,2,1)
+imshow(original)
+title('Original Image')
+subplot(1,2,2)
+imshow(contrastFiltered)
+title('Bottom Hat Filtered')
+
+
+% threshold = find(abs(pictureLap)>20)
+% size(list)
+% newArray = pictureLap() - list()
+% pictureLap(24,23)
