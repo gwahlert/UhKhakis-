@@ -1,0 +1,5 @@
+pictureLap = imread('lapcamfeed2.jpg')
+imshow(pictureLap)
+title('Original Image')
+size(pictureLap)
+info = imfinfo('lapcamfeed2.jpg')
