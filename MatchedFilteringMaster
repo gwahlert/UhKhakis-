@@ -1,0 +1,12 @@
+%Matched filtering test
+%% Make a Gaussian Kernel
+N=10;
+indx = -floor(N/2) : floor(N/2);
+ind=ind*50;
+[X Y] = meshgrid(ind, ind); %grid of coordinates
+% NEED A FOR LOOP HERE TO ITERATE THROUGH BLOOD VESSEL WIDTHS
+sigma=100; %1/2 approximated width of blood vessel= width of gaussian
+%h = -exp(-(X.^2+Y.^2) / (2*sigma*sigma))+1; %2D gaussian 
+h = -exp(-(X.^2) / (2*sigma*sigma))+1; %1D gaussian extended in the x direction
+imshow(h)
+ 
