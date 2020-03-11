@@ -1,0 +1,30 @@
+%Matched filtering test
+
+%% Make a Gaussian Kernel
+N=10;
+indx = -floor(N/2) : floor(N/2);
+ind=ind*50;
+[X Y] = meshgrid(ind, ind); %grid of coordinates
+% NEED A FOR LOOP HERE TO ITERATE THROUGH BLOOD VESSEL WIDTHS
+sigma=100; %1/2 approximated width of blood vessel= width of gaussian
+%gkernel = -exp(-(X.^2+Y.^2) / (2*sigma*sigma))+1; %2D gaussian 
+gkernel = -exp(-(X.^2) / (2*sigma*sigma))+1; %1D gaussian extended in the x direction
+imshow(h)
+ 
+%% Convolution + Threshold
+img2=imread('surgery.png');
+[imager,imageg,imageb]=RGB(img2);
+
+deg=15; %degree of rotation increment
+deg_step= 180/deg; %steps
+
+for rotor= 1:deg_step
+	gkernel_rotated=1-gkernel;%invert pixel intensity (necessary due to property of rotate function)
+	gkernel_rotated=imrotate(gkernel_rotated,deg_step); %rotate
+	gkernel=1-gkernel; %invert back
+filtered_image =conv2(imageg,gkernel); %convolution
+filtered_image =filtered_image/max(h_new,[],'all'); %normalize 
+end
+%imshow(h_new);
+
+ 
