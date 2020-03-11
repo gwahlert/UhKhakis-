@@ -1,0 +1,66 @@
+clc
+clear all
+
+%% OPEN IMAGE AND PROVIDE INFO %
+
+pictureLap = imread('lapcamfeed2.jpg')
+imshow(pictureLap)
+title('Original Image')
+size(pictureLap)
+info = imfinfo('lapcamfeed2.jpg')
+
+%% SEPARATE INTO RGB CHANELS %
+
+rgbImage = imread('lapcamfeed2.jpg');
+redChannel = rgbImage(:,:,1); % Red channel
+greenChannel = rgbImage(:,:,2); % Green channel
+blueChannel = rgbImage(:,:,3); % Blue channel
+allBlack = zeros(size(rgbImage, 1), size(rgbImage, 2), 'uint8');
+
+% Display them all.
+figure
+subplot(2, 2, 1);
+imshow(rgbImage);
+fontSize = 10;
+title('Original RGB Image', 'FontSize', fontSize)
+subplot(2, 2, 2);
+imshow(redChannel);
+title('Red Channel', 'FontSize', fontSize)
+subplot(2, 2, 3);
+imshow(greenChannel)
+title('Green Channel', 'FontSize', fontSize)
+subplot(2, 2, 4);
+imshow(blueChannel);
+title('Blue Channel', 'FontSize', fontSize)
+
+
+%% MATCH FILTERING %
+
+% MAX FINDING %
+%  minValue = min(greenChannel(:))
+% % % [i,j,v] = find(greenChannel == maxValue)
+%  [rowsOfMaxes, colsOfMaxes] = find(pictureLap == minValue)
+% % find(maxValue)
+% [maxval,idx]=max(greenChannel(:));
+% [row,col]=ind2sub(size(greenChannel), idx);
+
+% BOTTOM HAT FILTERING %
+original = pictureLap;
+se = strel('disk',3);
+contrastFiltered = imsubtract(imadd(original,imtophat(original,se)), imbothat(original,se));
+
+figure
+subplot(1,2,1)
+imshow(original)
+title('Original Image')
+subplot(1,2,2)
+imshow(contrastFiltered)
+title('Bottom Hat Filtered')
+
+
+% threshold = find(abs(pictureLap)>20)
+% size(list)
+% newArray = pictureLap() - list()
+% pictureLap(24,23)
+
+
