@@ -1,30 +1,44 @@
 %Matched filtering test
 
-%% Make a Gaussian Kernel
+% Make a Gaussian Kernel
 N=10;
-indx = -floor(N/2) : floor(N/2);
+ind = -floor(N/2) : floor(N/2);
 ind=ind*50;
 [X Y] = meshgrid(ind, ind); %grid of coordinates
 % NEED A FOR LOOP HERE TO ITERATE THROUGH BLOOD VESSEL WIDTHS
-sigma=100; %1/2 approximated width of blood vessel= width of gaussian
+sigma=50; %1/2 approximated width of blood vessel= width of gaussian
 %gkernel = -exp(-(X.^2+Y.^2) / (2*sigma*sigma))+1; %2D gaussian 
 gkernel = -exp(-(X.^2) / (2*sigma*sigma))+1; %1D gaussian extended in the x direction
-imshow(h)
+imshow(gkernel)
  
 %% Convolution + Threshold
-img2=imread('surgery.png');
-[imager,imageg,imageb]=RGB(img2);
+%img2=imread('surgery.png'); %test
+img2=imread('linestartest.png'); %test
 
-deg=15; %degree of rotation increment
+[imager,imageg,imageb]=RGB(img2); %note: uint8 on scale from 0-256. double on scale from 0-1
+imageg=1-double(imageg)/256; %turn negative and into double
+deg=30; %degree of rotation increment
 deg_step= 180/deg; %steps
-
-for rotor= 1:deg_step
+filtered_image={}; %initialize array
+%gausstest={}; %testing if the gaussian rotates (not necessary)
+threshold=0.9; %threshold for binary image thresholding determined arbitrarily
+for rotor= 0:deg_step
 	gkernel_rotated=1-gkernel;%invert pixel intensity (necessary due to property of rotate function)
-	gkernel_rotated=imrotate(gkernel_rotated,deg_step); %rotate
-	gkernel=1-gkernel; %invert back
-filtered_image =conv2(imageg,gkernel); %convolution
-filtered_image =filtered_image/max(h_new,[],'all'); %normalize 
+	gkernel_rotated=imrotate(gkernel_rotated,rotor*15); %rotate
+%	gkernel_rotated=1-gkernel_rotated; %invert back
+ %   gausstest{1,rotor+1}=gkernel_rotated; %testing if the gaussian rotates (not necessary)
+conv_img=conv2(imageg,gkernel_rotated,'valid'); %convolution- "valid' returns convolution without zero-padded edges
+filtered_image {1,rotor+1}=im2bw(conv_img/max(conv_img,[],'all'),threshold); %normalize and threshold image
 end
-%imshow(h_new);
-
  
+%show images
+for x=1:length(filtered_image)
+    
+    figure(x)
+    
+    imshow(cell2mat(filtered_image(1,x)));
+        %imshow(cell2mat(gausstest(1,x))); %testing if the gaussian rotates (not necessary)
+
+end
+%Fix! shouldn't the last rotation convolved image be the same as the first?
+
