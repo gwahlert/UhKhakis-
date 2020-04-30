@@ -1,44 +1,133 @@
 %Matched filtering test
+%tic
+% Set up a Gaussian Kernel
+Nx=30;%kernel width
+Ny=Nx; %max height of kernel (length of vessel segment). Actual dimension of kernel is determined by gkernel_size variable
+indx = -floor(Nx/2) : floor(Nx/2);
+indx=indx*50;
+indy = -floor(Ny/2) : floor(Ny/2);
+indy=indy*50;
+[X Y] = meshgrid(indx, indy); %grid of coordinates
 
-% Make a Gaussian Kernel
-N=10;
-ind = -floor(N/2) : floor(N/2);
-ind=ind*50;
-[X Y] = meshgrid(ind, ind); %grid of coordinates
-% NEED A FOR LOOP HERE TO ITERATE THROUGH BLOOD VESSEL WIDTHS
-sigma=50; %1/2 approximated width of blood vessel= width of gaussian
-%gkernel = -exp(-(X.^2+Y.^2) / (2*sigma*sigma))+1; %2D gaussian 
-gkernel = -exp(-(X.^2) / (2*sigma*sigma))+1; %1D gaussian extended in the x direction
-imshow(gkernel)
- 
-%% Convolution + Threshold
-%img2=imread('surgery.png'); %test
-img2=imread('linestartest.png'); %test
-
-[imager,imageg,imageb]=RGB(img2); %note: uint8 on scale from 0-256. double on scale from 0-1
+%read in test image
+%original_image=imread('linetest2.png'); %test
+%original_image=imread('bloblinetest.png'); %test
+original_image=imread('surgery5.png');
+original_copy=original_image;
+[imager,imageg,imageb]=RGB(original_image); %note: uint8 on scale from 0-256. double on scale from 0-1
+%getting rid of glare 
+%
+glare_val=169; % assumed image saturation value 
+imageg_mask=imageg>glare_val; 
+imageg=regionfill(imageg,imageg_mask);
+%}
 imageg=1-double(imageg)/256; %turn negative and into double
-deg=30; %degree of rotation increment
-deg_step= 180/deg; %steps
-filtered_image={}; %initialize array
-%gausstest={}; %testing if the gaussian rotates (not necessary)
-threshold=0.9; %threshold for binary image thresholding determined arbitrarily
-for rotor= 0:deg_step
-	gkernel_rotated=1-gkernel;%invert pixel intensity (necessary due to property of rotate function)
-	gkernel_rotated=imrotate(gkernel_rotated,rotor*15); %rotate
-%	gkernel_rotated=1-gkernel_rotated; %invert back
- %   gausstest{1,rotor+1}=gkernel_rotated; %testing if the gaussian rotates (not necessary)
-conv_img=conv2(imageg,gkernel_rotated,'valid'); %convolution- "valid' returns convolution without zero-padded edges
-filtered_image {1,rotor+1}=im2bw(conv_img/max(conv_img,[],'all'),threshold); %normalize and threshold image
+%imshow(gkernel)
+%#{ adaptive thesholding specific code
+binary_sensitivity= 0.2; %adjust this number lower to decrease sensitivity of vein detection
+%#}
+%% Convolution + Threshold
+%setup parameters
+width_g=14; %number of blood vessel sizes that will be iterated through
+girth_start=1;
+%1/2 approximated width of blood vessel= width of gaussian
+deg=20; %degree of rotation increment
+deg_step= floor(180/deg); %# of steps
+sigma_adjust=0.3; %0.3 is arbitrary. 
+threshold=0.58; %threshold for binary image thresholding determined by guess and check (is there a way to normalize?)
+gkernel_size=10; %determines size of convolution kernel (makes it a square). Only even numbers matter
+gausstest=cell(1,width_g-girth_start);
+filtered_images=cell(1,width_g-girth_start);
+for girth=girth_start:width_g
+    %kernel setup
+    sigma=girth*5; %70 determined to be max
+    gkernel = -exp(-(X.^2) / (2*sigma*sigma))+1; %1D gaussian extended in the x direction
+    %sets up zero-crossing that will penalize that which does not conform to the kernel shape
+    %angle setup
+    gausstest_ang=cell(1,deg_step);
+    angle_conv=cell(1,deg_step); 
+    for rotor= 0:deg_step
+        gkernel_rotated=1-gkernel;%invert pixel intensity (necessary due to property of rotate function)
+        gkernel_rotated=imrotate(gkernel_rotated,rotor*deg,'bicubic','crop'); %rotate
+        gkernel_rotated=gkernel_rotated(floor(Nx/2)+1-floor(gkernel_size/2):floor(Nx/2)+1+floor(gkernel_size/2),floor(Ny/2)+1-floor(gkernel_size/2):floor(Ny/2)+1+floor(gkernel_size/2)); %crops kernel size down a gkernel_size x gkernel_size dimensions
+
+        gkernel_rotated=gkernel_rotated-sigma_adjust; %sets up zero-crossing that will penalize that which does not conform to the kernel shape
+        gausstest_ang{1,rotor+1}=gkernel_rotated; %testing if the gaussian rotates (not necessary)
+        conv_img=conv2(imageg,gkernel_rotated,'same'); %convolution- "same' returns the an image of the same size and the input image. this results in the zeropadded border being included. (green border in overlay)
+       % conv_img=conv2(imageg,gkernel_rotated,'valid'); %convolution-
+       % "valid' returns convolution without zero-padded edges- but this causes
+       % the overlay to shift up and to the left
+
+        %angle_conv{1,rotor+1}=imbinarize(conv_img/max(conv_img,[],'all'),threshold); %normalize and threshold image
+       % max(conv_img,[],'all')
+       if max(conv_img,[],'all')>0
+           %angle_conv{1,rotor+1}=imbinarize(conv_img/max(conv_img,[],'all'),threshold); %normalize and threshold image
+          
+           %#{adaptive thesholding specific code
+
+           angle_conv{1,rotor+1}=imbinarize(conv_img/max(conv_img,[],'all'),'adaptive','ForegroundPolarity','bright','Sensitivity',binary_sensitivity); %normalize and threshold image
+ %#}
+           %angle_conv{1,rotor+1}=conv_img; %why does this work so well/???? FIND OUT HOW. COULD LEAD TO BUGS LATER
+
+       else
+          % angle_conv{1,rotor+1}=imbinarize(conv_img,threshold);
+           angle_conv{1,rotor+1}=zeros(size(conv_img));
+
+       end
+       
+    end
+    filtered_images{1,girth-girth_start+1}=angle_conv;
+    gausstest{1,girth-girth_start+1}=gausstest_ang;
 end
- 
+%%
+ %{
 %show images
-for x=1:length(filtered_image)
+%for y=1:width_g-girth_start
+
+for x=1:deg_step+1
+
+    %figure(x+((y-1)*(deg_step+1)))
     
-    figure(x)
-    
-    imshow(cell2mat(filtered_image(1,x)));
-        %imshow(cell2mat(gausstest(1,x))); %testing if the gaussian rotates (not necessary)
+    %imshow(filtered_images{1,y}{1,x});
+    figure(x+deg_step+1)
+    imshow(gausstest{1,10}{1,x}); %testing if the gaussian rotates (not necessary)
 
 end
-%Fix! shouldn't the last rotation convolved image be the same as the first?
+%end
 
+%}
+%Fix! shouldn't the last rotation convolved image be the same as the first?
+%% Generate overlay with original image (original copy) SAVE
+
+overlay_values=zeros(size(filtered_images{1,1}{1,1}));
+for filtlength=1:length(filtered_images)
+    for anglength=1:length(filtered_images{1,1})
+        overlay_values=overlay_values+filtered_images{1,filtlength}{1,anglength};
+    end
+end
+overlay_values=imbinarize(overlay_values,1);
+%get rid of zero padded borders. Edges will have noise
+
+[ov_dim1x,ov_dim1y]=size(overlay_values);
+zeropad_removal=0.05;
+overlay_values(1:floor(ov_dim1x*zeropad_removal),:)=0;
+overlay_values(ov_dim1x-floor(ov_dim1x*zeropad_removal):ov_dim1x,:)=0;
+overlay_values(:,1:floor(ov_dim1y*zeropad_removal))=0;
+overlay_values(:,ov_dim1y-floor(ov_dim1y*zeropad_removal):ov_dim1y)=0;
+%
+
+
+%imshow(overlay_values);
+
+[xoverlay,yoverlay]=find(overlay_values);
+for xo=1:length(xoverlay)
+        original_image(xoverlay(xo),yoverlay(xo),2)=256;
+         original_image(xoverlay(xo),yoverlay(xo),1)=0;
+         original_image(xoverlay(xo),yoverlay(xo),3)=0;
+
+end
+%imshow(original_image);
+figure(1)
+imshowpair(original_copy,original_image,'montage')
+%}
+%toc
